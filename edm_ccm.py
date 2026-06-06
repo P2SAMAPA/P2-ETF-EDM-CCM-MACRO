@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import cdist
+import config
 
 def simplex_projection(series, library_indices, prediction_indices, E=3, tau=1):
     """

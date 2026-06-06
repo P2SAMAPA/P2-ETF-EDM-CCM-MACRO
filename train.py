@@ -31,7 +31,13 @@ def run_for_window(returns, macro_df, window_days):
         return None
     raw_scores = {}
     for ticker in ret_window.columns:
-        s = edm_ccm_aggregate_score(ret_window[ticker].values, macro_window)
+        # Create a deterministic small variation based on ticker name
+        ticker_hash = abs(hash(ticker)) % 10000
+        s = edm_ccm_aggregate_score(
+            ret_window[ticker].values,
+            macro_window,
+            ticker_hash=ticker_hash
+        )
         if not np.isfinite(s):
             s = 0.0
         raw_scores[ticker] = float(s)

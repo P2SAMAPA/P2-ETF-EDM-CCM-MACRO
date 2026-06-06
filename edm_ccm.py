@@ -7,25 +7,26 @@ def simplex_projection(series, library_indices, prediction_indices, E=3, tau=1):
     Predict using simplex projection (nearest neighbours in state space).
     Returns a correlation between observed and predicted values (skill).
     """
-    if len(series) < E * tau + 1:
-        return 0.0
-    # Time‑delayed embedding
     n = len(series)
-    indices = np.arange(n)
+    if n < E * tau + 1:
+        return 0.0
+    # Time‑delayed embedding for library
     library_emb = []
+    lib_next = []  # next value after each library point
     for i in library_indices:
-        if i >= E * tau:
-            emb = series[i - E*tau : i+1 : tau][-E:]  # last E points spaced by tau
+        if i >= E * tau and i < n - 1:  # need at least one future point
+            emb = series[i - E*tau : i+1 : tau][-E:]
             if len(emb) == E:
                 library_emb.append(emb)
-    library_emb = np.array(library_emb)
+                lib_next.append(series[i+1])
     if len(library_emb) == 0:
         return 0.0
+    library_emb = np.array(library_emb)
     # For each prediction point
     observed = []
     predicted = []
     for pi in prediction_indices:
-        if pi < E * tau:
+        if pi < E * tau or pi >= n - 1:
             continue
         target_emb = series[pi - E*tau : pi+1 : tau][-E:]
         if len(target_emb) != E:
@@ -37,10 +38,10 @@ def simplex_projection(series, library_indices, prediction_indices, E=3, tau=1):
         if k == 0:
             continue
         nn_idx = np.argsort(dists)[:k]
-        weights = np.exp(-dists[nn_idx] / np.mean(dists[nn_idx]))
+        weights = np.exp(-dists[nn_idx] / (np.mean(dists[nn_idx]) + 1e-12))
         weights = weights / np.sum(weights)
         # Prediction = weighted average of next values of neighbours
-        pred_val = np.sum(weights * series[library_indices[nn_idx] + 1])
+        pred_val = np.sum(weights * np.array(lib_next)[nn_idx])
         observed.append(series[pi + 1])
         predicted.append(pred_val)
     if len(observed) < 2:
